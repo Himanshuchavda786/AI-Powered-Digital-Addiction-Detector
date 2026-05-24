@@ -2605,120 +2605,77 @@ def page_behavior_intelligence(df):
 def page_ml_predictions(df):
     st.title("🤖 Machine Learning Predictions")
 
-    view_mode = st.radio(
-        "Display Mode:",
-        ["🟢 Simple View (User Friendly)", "⚙️ Advanced View (Technical Details)"],
-        horizontal=True
-    )
+    view_mode = st.radio("Display Mode:", ["🟢 Simple View (User Friendly)", "⚙️ Advanced View (Technical Details)"],
+                         horizontal=True)
+
+    st.markdown('<div class="divider"></div>', unsafe_allow_html=True)
 
     with st.spinner("Training ML models on dataset..."):
         r1 = train_addiction_risk_model(df)
         r2 = train_screen_time_models(df)
         r3 = train_behavior_pattern_model(df)
 
-    # =========================================================
-    # SIMPLE VIEW
-    # =========================================================
     if "Simple View" in view_mode:
-        st.markdown('<div class="divider"></div>', unsafe_allow_html=True)
-
         st.subheader("🔮 Live AI Risk Prediction")
-
         pf = st.session_state.get('phone_profile', {})
         is_mobile = st.session_state.get('sidebar_data_mode', '') in ["Simulated Mobile", "Connect Phone"]
 
         if pf and is_mobile:
-
-            st.markdown("📱 Real-time mobile data is being analyzed automatically")
-            st.markdown('</div>', unsafe_allow_html=True)
-
-            st_val = pf.get('total_screen_time', 8.0)
-            nu_val = pf.get('nighttime_usage', 1.0)
-            notif_val = pf.get('notifications_per_day', 150)
-            binge_val = pf.get('binge_sessions_per_week', 5)
-            fomo_val = pf.get('fomo_score', 5)
-            anx_val = pf.get('anxiety_score', 5)
-            pickup_val = pf.get('phone_pickups_per_hour', 20)
-            sleep_dis = pf.get('sleep_disruption_score', 5)
-
+            st.info("📱 Analyzing real-time data automatically from your connected device...")
+            st_val, nu_val = pf.get('total_screen_time', 8.0), pf.get('nighttime_usage', 1.0)
+            notif_val, binge_val = pf.get('notifications_per_day', 150), pf.get('binge_sessions_per_week', 5)
+            fomo_val, anx_val = pf.get('fomo_score', 5), pf.get('anxiety_score', 5)
+            pickup_val, sleep_dis = pf.get('phone_pickups_per_hour', 20), pf.get('sleep_disruption_score', 5)
             submitted = True
-
         else:
-
-            st.info("📊 Dataset Mode — Adjust sliders to test AI prediction")
-            st.markdown('</div>', unsafe_allow_html=True)
-
+            st.info("📊 You are in Dataset mode. Simply drag the sliders below to manually test the AI!")
             with st.form("risk_form"):
-
-                c1, c2 = st.columns(2)
-
-                with c1:
+                fc1, fc2 = st.columns(2)
+                with fc1:
                     st_val = st.slider("Total Screen Time (hrs)", 0.0, 24.0, 8.0, 0.5)
                     nu_val = st.slider("Nighttime Usage (hrs)", 0.0, 8.0, 1.0, 0.1)
                     notif_val = st.slider("Notifications per Day", 0, 500, 150)
                     binge_val = st.slider("Binge Sessions / Week", 0, 20, 5)
-
-                with c2:
+                with fc2:
                     fomo_val = st.slider("FOMO Score (1-10)", 1, 10, 5)
                     anx_val = st.slider("Anxiety Score (1-10)", 1, 10, 5)
                     pickup_val = st.slider("Phone Pickups / Hour", 0, 60, 20)
                     sleep_dis = st.slider("Sleep Disruption Score (1-10)", 1, 10, 5)
+                submitted = st.form_submit_button("Predict AI Behavior Strategy", type="primary",
+                                                  use_container_width=True)
 
-                submitted = st.form_submit_button(
-                    "Predict AI Behavior Strategy",
-                    type="primary",
-                    use_container_width=True
-                )
-
-        # =========================================================
-        # PREDICTION OUTPUT
-        # =========================================================
         if submitted:
-
             input_data = {
-                'total_screen_time': st_val,
-                'nighttime_usage': nu_val,
-                'notifications_per_day': notif_val,
-                'binge_sessions_per_week': binge_val,
-                'fomo_score': fomo_val,
-                'anxiety_score': anx_val,
-                'phone_pickups_per_hour': pickup_val,
-                'sleep_disruption_score': sleep_dis
+                'total_screen_time': st_val, 'nighttime_usage': nu_val,
+                'notifications_per_day': notif_val, 'binge_sessions_per_week': binge_val,
+                'fomo_score': fomo_val, 'anxiety_score': anx_val,
+                'phone_pickups_per_hour': pickup_val, 'sleep_disruption_score': sleep_dis
             }
-
             label, probs = predict_addiction_risk(r1, input_data)
 
+            st.markdown('<div class="divider"></div>',unsafe_allow_html=True)
+
             st.markdown("### AI Summary Report 📋")
-
-            # =========================
-            # HIGH RISK CARD
-            # =========================
             if 'High' in label:
-
                 st.markdown(f"""
                 <div class="error-card">
                     <h3>🔴 High Risk Detected</h3>
                     <p><b>Status:</b> {label}</p>
-                    <p><b>Confidence:</b> {probs[1]:.1%}</p>
+                    <p><b>Confidence:</b> {probs[0]:.1%}</p>
                 </div>
                 """, unsafe_allow_html=True)
 
                 st.markdown('<div class="divider"></div>', unsafe_allow_html=True)
 
-                st.markdown("### Why AI detected risk:")
-
-                if st_val > 6:
-                    st.markdown("- 📉 High Screen Time usage")
-                if nu_val > 2:
-                    st.markdown("- 🌙 Excessive Night Usage")
-                if binge_val > 5:
-                    st.markdown("- ⏱️ Frequent binge sessions")
-                if notif_val > 150:
-                    st.markdown("- 🔔 High notification overload")
-
-            # =========================
-            # SAFE CARD
-            # =========================
+                st.write("**Why did the AI decide this?**")
+                if st_val > 6.0: st.markdown(
+                    "- 📉 **Screen Time:** It is heavily inflated compared to the healthy baseline.")
+                if nu_val > 2.0: st.markdown(
+                    "- 🌙 **Night Habits:** Too much nighttime phone usage is directly impacting your sleep disruption logic.")
+                if binge_val > 5: st.markdown(
+                    "- ⏱️ **Frequency:** High frequency of continuous 'binge-sessions' detected.")
+                if notif_val > 150: st.markdown(
+                    "- 🔔 **Distractions:** Heavy notification loads correspond to your high FOMO/Anxiety predictions.")
             else:
                 st.markdown(f"""
                 <div class="success-card">
@@ -2728,54 +2685,220 @@ def page_ml_predictions(df):
                 </div>
                 """, unsafe_allow_html=True)
 
-            # =========================================================
-            # PROBABILITY CHART
-            # =========================================================
+                st.markdown('<div class="divider"></div>', unsafe_allow_html=True)
+
+                st.markdown("""
+                    <div class="glass-card" style="margin-top:15px;">
+                        Your usage is currently healthy and within balanced boundaries based on our dataset averages.
+                    </div>
+                    """, unsafe_allow_html=True)
+
             st.markdown('<div class="divider"></div>', unsafe_allow_html=True)
 
+            # Simple bar chart
             fig_prob = go.Figure(go.Bar(
-                x=['Not Addicted', 'Addicted'],
-                y=[probs[0], probs[1]]
+                x=['Not Addicted', 'Addicted'], y=[probs[0], probs[1]],
+                marker_color=['#00CC96', '#EF553B']
             ))
-
+            fig_prob.update_layout(title='AI Probability Distribution', height=300, yaxis_range=[0, 1])
             st.plotly_chart(fig_prob, use_container_width=True)
 
-    # =========================================================
-    # ADVANCED VIEW
-    # =========================================================
     else:
-
-        st.subheader("📊 Advanced ML Model Analytics")
-        st.markdown('</div>', unsafe_allow_html=True)
-
         tab1, tab2, tab3 = st.tabs([
-            "🎯 Addiction Risk",
-            "📉 Screen Time Forecast",
-            "🌲 Behavior Patterns"
+            "🎯 Tab 1: Addiction Risk (LogReg)",
+            "📉 Tab 2: Screen Time Forecast (LR / MLR)",
+            "🌲 Tab 3: Behavior Patterns (Random Forest)"
         ])
 
-        # ---------------- TAB 1 ----------------
+        # ── TAB 1 ──────────────────────────────────────────────────────────────
         with tab1:
+            st.subheader("Addiction Risk Prediction — Logistic Regression")
 
-            c1, c2, c3 = st.columns(3)
+            st.markdown('<div class="divider"></div>', unsafe_allow_html=True)
 
+            a1, a2, a3 = st.columns(3)
+
+            with a1:
+                st.markdown(f"""
+                <div class="kpi-card">
+                    <div class="kpi-title">Model Accuracy</div>
+                    <div class="kpi-value">{r1['accuracy']}%</div>
+                </div>
+                """, unsafe_allow_html=True)
+
+            with a2:
+                st.markdown(f"""
+                <div class="kpi-card">
+                    <div class="kpi-title">Precision (Addicted)</div>
+                    <div class="kpi-value">
+                        {r1['classification_report']['1']['precision']:.2%}
+                    </div>
+                </div>
+                """, unsafe_allow_html=True)
+
+            with a3:
+                st.markdown(f"""
+                <div class="kpi-card">
+                    <div class="kpi-title">Recall (Addicted)</div>
+                    <div class="kpi-value">
+                        {r1['classification_report']['1']['recall']:.2%}
+                    </div>
+                </div>
+                """, unsafe_allow_html=True)
+
+            st.markdown("<div class='divider'></div>", unsafe_allow_html=True)
+
+            c1, c2 = st.columns(2)
             with c1:
-                st.markdown('<div class="kpi-card">', unsafe_allow_html=True)
-                st.metric("Accuracy", f"{r1['accuracy']}%")
-                st.markdown('</div>', unsafe_allow_html=True)
+                # Confusion Matrix
+                cm = r1['confusion_matrix']
+                fig_cm = px.imshow(cm, text_auto=True, aspect='auto',
+                                   x=['Pred: Not Addicted', 'Pred: Addicted'],
+                                   y=['True: Not Addicted', 'True: Addicted'],
+                                   title='Confusion Matrix', color_continuous_scale='Blues')
 
+
+                st.plotly_chart(fig_cm, use_container_width=True)
             with c2:
-                st.markdown('<div class="kpi-card">', unsafe_allow_html=True)
-                st.metric("Precision", f"{r1['classification_report']['1']['precision']:.2%}")
-                st.markdown('</div>', unsafe_allow_html=True)
+                # Feature importance
+                fi = pd.DataFrame.from_dict(r1['feature_importance'], orient='index', columns=['Importance'])
+                fi = fi.sort_values('Importance', ascending=True)
+                fig_fi = px.bar(fi, x='Importance', y=fi.index, orientation='h',
+                                title='Feature Importance (|Coefficients|)',
+                                color='Importance', color_continuous_scale='Reds')
+                st.plotly_chart(fig_fi, use_container_width=True)
 
-            with c3:
-                st.markdown('<div class="kpi-card">', unsafe_allow_html=True)
-                st.metric("Recall", f"{r1['classification_report']['1']['recall']:.2%}")
-                st.markdown('</div>', unsafe_allow_html=True)
+        # ── TAB 2 ──────────────────────────────────────────────────────────────
+        with tab2:
+            st.subheader("Screen Time Prediction — Linear & Multiple Linear Regression")
 
-        # (Other tabs remain same logic, only wrap charts if you want UI upgrade)
+            st.markdown('<div class="divider"></div>', unsafe_allow_html=True)
 
+            t2c1, gap, t2c2 = st.columns([1, 0.1, 1])
+
+            t2c1.markdown(f"""
+                <div class="glass-card success-card">
+                    <div class="kpi-title">LR MAE</div>
+                    <div class="kpi-value success-value">{r2['lr_mae']:.2f} hrs</div>
+                </div>
+            """, unsafe_allow_html=True)
+
+            t2c2.markdown(f"""
+                <div class="glass-card success-card">
+                    <div class="kpi-title">LR RMSE</div>
+                    <div class="kpi-value success-value">{r2['lr_rmse']:.2f} hrs</div>
+                </div>
+            """, unsafe_allow_html=True)
+
+            st.markdown('<div class="divider"></div>', unsafe_allow_html=True)
+
+            t2c1, gap, t2c2 = st.columns([1, 0.1, 1])
+
+            t2c1.markdown(f"""
+                <div class="glass-card info-card">
+                    <div class="kpi-title">MLR MAE</div>
+                    <div class="kpi-value info-value">{r2['mlr_mae']:.2f} hrs</div>
+                </div>
+            """, unsafe_allow_html=True)
+
+            t2c2.markdown(f"""
+                <div class="glass-card info-card">
+                    <div class="kpi-title">MLR RMSE</div>
+                    <div class="kpi-value info-value">{r2['mlr_rmse']:.2f} hrs</div>
+                </div>
+            """, unsafe_allow_html=True)
+
+            sample_n = min(300, len(r2['y_test']))
+            y_test_s = r2['y_test'].values[:sample_n]
+            y_pred_lr_s = r2['y_pred_lr'][:sample_n]
+            y_pred_mlr_s = r2['y_pred_mlr'][:sample_n]
+            x_idx = list(range(sample_n))
+
+            st.markdown('<div class="divider"></div>', unsafe_allow_html=True)
+
+            fig_lr = go.Figure()
+            fig_lr.add_trace(go.Scatter(x=x_idx, y=y_test_s, mode='lines', name='Actual', line=dict(color='blue')))
+            fig_lr.add_trace(go.Scatter(x=x_idx, y=y_pred_lr_s, mode='lines', name='LR Predicted',
+                                        line=dict(color='orange', dash='dash')))
+            fig_lr.add_trace(go.Scatter(x=x_idx, y=y_pred_mlr_s, mode='lines', name='MLR Predicted',
+                                        line=dict(color='green', dash='dot')))
+            fig_lr.update_layout(title='Actual vs Predicted Screen Time (LR & MLR)', height=400,
+                                 xaxis_title='Sample Index', yaxis_title='Screen Time (hrs)')
+            st.plotly_chart(fig_lr, use_container_width=True)
+
+            st.markdown('<div class="divider"></div>', unsafe_allow_html=True)
+
+            # Residual
+            residuals_mlr = y_test_s - y_pred_mlr_s
+            fig_res = px.histogram(residuals_mlr, nbins=40, title='MLR Residuals Distribution',
+                                   color_discrete_sequence=['#636EFA'])
+            fig_res.add_vline(x=0, line_dash='dash', line_color='red')
+            st.plotly_chart(fig_res, use_container_width=True)
+
+        # ── TAB 3 ──────────────────────────────────────────────────────────────
+        with tab3:
+            st.subheader("Behavior Pattern Prediction — Random Forest")
+
+            st.markdown("""<div class="divider"></div>""", unsafe_allow_html=True)
+
+            t3c1, t3c2, t3c3 = st.columns(3)
+
+            t3c1.markdown(f"""
+            <div class="kpi-card">
+                <div class="kpi-title">RF Accuracy</div>
+                <div class="kpi-value success-value">{r3['accuracy']}%</div>
+                <div class="kpi-sub">Model Performance Score</div>
+            </div>
+            """, unsafe_allow_html=True)
+
+            t3c2.markdown(f"""
+            <div class="kpi-card">
+                <div class="kpi-title">Classes</div>
+                <div class="kpi-value info-value">{list(r3['classes'])}</div>
+                <div class="kpi-sub">Detected Categories</div>
+            </div>
+            """, unsafe_allow_html=True)
+
+            t3c3.markdown("""
+            <div class="kpi-card">
+                <div class="kpi-title">N Estimators</div>
+                <div class="kpi-value warning-value">100</div>
+                <div class="kpi-sub">Tree Count</div>
+            </div>
+            """, unsafe_allow_html=True)
+
+            st.markdown("""<div class="divider"></div>""", unsafe_allow_html=True)
+
+            # Feature importance
+            fi3 = pd.DataFrame.from_dict(r3['feature_importance'], orient='index', columns=['Importance'])
+            fi3 = fi3.sort_values('Importance', ascending=True)
+            fig_fi3 = px.bar(fi3, x='Importance', y=fi3.index, orientation='h',
+                             title='Random Forest Feature Importance',
+                             color='Importance', color_continuous_scale='Greens')
+            fig_fi3.update_layout(height=420)
+            st.plotly_chart(fig_fi3, use_container_width=True)
+
+            st.markdown("""<div class="divider"></div>""", unsafe_allow_html=True)
+
+            # Confusion matrix
+            cm3 = r3['confusion_matrix']
+            classes = r3['classes']
+            fig_cm3 = px.imshow(cm3, text_auto=True, aspect='auto',
+                                x=[f'Pred: {c}' for c in classes],
+                                y=[f'True: {c}' for c in classes],
+                                title='RF Confusion Matrix', color_continuous_scale='Greens')
+            st.plotly_chart(fig_cm3, use_container_width=True)
+
+            st.markdown("""<div class="divider"></div>""", unsafe_allow_html=True)
+
+            # Prediction confidence sample
+            probs3 = r3['y_prob'][:50]
+            df_prob = pd.DataFrame(probs3, columns=classes)
+            df_prob['Index'] = range(len(df_prob))
+            df_melt = df_prob.melt(id_vars='Index', var_name='Class', value_name='Probability')
+            fig_conf = px.bar(df_melt, x='Index', y='Probability', color='Class',
+                              title='Prediction Confidence (First 50 Samples)', barmode='stack')
+            st.plotly_chart(fig_conf, use_container_width=True)
 # ══════════════════════════════════════════════════════════════════════════════
 # MODULE: RISK SCORING ENGINE
 # ══════════════════════════════════════════════════════════════════════════════
@@ -3161,7 +3284,7 @@ def page_chatbot():
     # API KEY
     # =========================================
 
-    GROQ_API_KEY = "git push origin main"
+    GROQ_API_KEY = ""
 
     if not GROQ_API_KEY:
         st.error("Please add your Groq API Key")
